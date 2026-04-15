@@ -1,0 +1,4 @@
+datasets/*
+rlbench_utils/src/rlbench_utils/__pycache__/*
+rlbench_utils/src/rlbench_utils.egg-info/*
+.vscode/*
