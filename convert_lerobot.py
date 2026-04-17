@@ -7,14 +7,16 @@ import pickle
 import time
 from typing import List
 from numpy import ndarray
+import numpy
+from rlbench_utils.demo import Demo
 from rlbench_utils.observation import Observation
 from rlbench_utils.observation_config import CameraConfig, ObservationConfig
 import rlbench_utils.utils 
-from lerobot.datasets.lerobot_dataset import LeRobotDataset
+from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from PIL import Image
 
 # DATASETS PATHS
-RLBENCH_DATASET_ROOT = "./datasets/rlbench/generated-14-04-11-42"
+RLBENCH_DATASET_ROOT = "./datasets/rlbench/generated-16-04-00-00"
 TASKS = os.listdir(RLBENCH_DATASET_ROOT)
 
 # CAMERA CONFIGURATIONS
@@ -28,10 +30,11 @@ OBS_CONFIG = ObservationConfig(
     right_shoulder_camera= CAMERA_CONFIG,
     overhead_camera= CAMERA_CONFIG,
     wrist_camera= CAMERA_CONFIG,
-    front_camera= CAMERA_CONFIG
+    front_camera= CAMERA_CONFIG,
+    gripper_joint_positions=True
 )
 
-# LERobot features dictionary
+# LeRobot features dictionary
 FEATURES_DICT = {
     "image": {
         "dtype": "image",
@@ -45,12 +48,13 @@ FEATURES_DICT = {
     },
     "state": {
         "dtype": "float32",
-        "shape": (8,),
+        "shape": (9,), # Joint states (7) + Gripper joint states
         "names": ["state"],
     },
+    
     "actions": {
         "dtype": "float32",
-        "shape": (7,),
+        "shape": (8,), # Joint velocities (7) + Gripper_is_open
         "names": ["actions"],
     }
 }
@@ -66,10 +70,10 @@ FRAME_DICT = {
 def main():
 
     lerobot_dataset = LeRobotDataset.create(
-        repo_id=f"RLBench{time.time()}",
+        repo_id=f"RLBench/16-test",
         fps=10,
         features=FEATURES_DICT,
-        root=f"datasets/lerobot/test-{time.time()}",
+        root=f"./datasets/lerobot/16-test",
         robot_type="panda"
     )
 
@@ -79,10 +83,9 @@ def main():
         # Open every variation
         for VARIATION in VARIATIONS:
             EPISODES = get_episodes_number(RLBENCH_DATASET_ROOT, TASK, VARIATION)
-            _temp_task_descr = get_task_description(RLBENCH_DATASET_ROOT, TASK, VARIATION) 
             # Open every episode
             for EPISODE in EPISODES:
-                print(f"Processing TASK:{TASK}, VARIATION:{VARIATION}, EP:{EPISODE}")
+                
                 # Get the demo for the episode, since loading all episodes is expensive
                 DEMOS = rlbench_utils.utils.get_stored_demos(
                     amount=1,
@@ -95,39 +98,25 @@ def main():
                     from_episode_number=EPISODE
                 )
                 DEMO = DEMOS.pop()
+                print(f"Processing TASK:{TASK}, VARIATION:{VARIATION}, EP:{EPISODE}:\n{DEMO.demo_description}")
                 # Given an image at timestep t, we want the action to reach next position
                 _prev_obs: Observation
                 for seq, observation in enumerate(DEMO):
-                    if seq == 0:
-                        _prev_obs = observation
-                        continue
-                    
-                    new_pose = observation.gripper_pose
-                    old_pose = _prev_obs.gripper_pose
-
                     FRAME_DICT["image"] = observation.front_rgb # TODO: Which format?? Now is uint8 rgb with (width, height, channels)
                     FRAME_DICT["wrist_image"] = observation.wrist_rgb
-                    FRAME_DICT["state"] = observation.joint_positions
-                    FRAME_DICT["actions"] = observation.gripper_pose # TODO: convert to delta xyz
-                    FRAME_DICT["task"] = _temp_task_descr
+                    FRAME_DICT["state"] = numpy.concatenate((observation.joint_positions, observation.gripper_joint_positions), dtype=numpy.float32)
+                    FRAME_DICT["actions"] = numpy.concatenate((observation.joint_velocities, [observation.gripper_open]),dtype=numpy.float32) # TODO: convert to delta xyz
+                    if type(DEMO.demo_description) == list:
+                        FRAME_DICT["task"] = DEMO.demo_description[0]
+                    else:
+                        FRAME_DICT["task"] = DEMO.demo_description
 
                     lerobot_dataset.add_frame(FRAME_DICT)
-                    _prev_obs = observation
                 lerobot_dataset.save_episode()
-                
                 
         
 
 # ----- UTILITY FUNCTIONS -----
-
-def get_task_description(dataset_path: str, task_name:str, variation_id: int, VARIATION_FOLDER_PREFIX = "variation", DESCRIPTIONS_FILENAME = "variation_descriptions.pkl" ) -> str:
-    # TODO: Fix the description in the picke file
-    f = open(os.path.join(dataset_path, task_name, VARIATION_FOLDER_PREFIX + str(variation_id), DESCRIPTIONS_FILENAME ), "rb")
-    obj = pickle.load(f)
-    print(f"Warning: Until fix this task only has {len(obj)} descriptions:\n{obj}")
-    return obj[0]
-
-
 
 # Get list of variations for task
 def get_variations_ids(dataset_path: str, task_name:str, VARIATION_FOLDER_PREFIX = "variation") -> List[int]:
