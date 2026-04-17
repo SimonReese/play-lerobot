@@ -16,9 +16,12 @@ from .vision_sensor import VisionSensor
 
 from . import demo
 from . import observation
+import rlbench_utils
+sys.modules["rlbench"] = rlbench_utils
 sys.modules["rlbench.demo"] = demo
 sys.modules["rlbench.backend.observation"] = observation
 
+from scipy.spatial.transform import Rotation
 
 def image_to_float_array(image, scale_factor=None):
     """Recovers the depth values from an image.
@@ -371,8 +374,71 @@ def get_stored_demos(amount: int, image_paths: bool, dataset_root: str,
         demos.append(obs)
     return demos
 
-
 def _resize_if_needed(image, size):
     if image.size[0] != size[0] or image.size[1] != size[1]:
         image = image.resize(size)
     return image
+
+def get_panda_gripper_open_amount(gripper_joint_positions: np.ndarray) -> List[float]:
+        """Gets the gripper open state for the panda gripper. 1 means open, whilst 0 means closed.
+
+        PANDA_JOINT_INTERVALS_LIST = [
+            [0.0, 0.03999999910593033],
+            [0.0, 0.03999999910593033]
+        ]
+
+        :param gripper_joint_positions: numpy.ndarray containing the current position of the gripper joints
+
+        :return: A list of floats between 0 and 1 representing the gripper open
+            state for each joint. 1 means open, whilst 0 means closed.
+        """
+        PANDA_JOINT_INTERVALS_LIST = [[0.0, 0.03999999910593033], [0.0, 0.03999999910593033]]
+        joint_intervals_list = PANDA_JOINT_INTERVALS_LIST
+        joint_intervals = np.array(joint_intervals_list)
+        joint_range = joint_intervals[:, 1] - joint_intervals[:, 0]
+        return list(np.clip((np.array(
+            gripper_joint_positions) - joint_intervals[:, 0]) /
+                            joint_range, 0.0, 1.0))
+
+
+# ------- SPATIAL POSE UTILITY FUNCTIONS ------------
+def pose_to_T(p, q):
+    T = np.eye(4)
+    T[:3, :3] = Rotation.from_quat(q).as_matrix()
+    T[:3, 3] = p
+    return T
+
+def invert_T(T):
+    Rm = T[:3, :3]
+    p = T[:3, 3]
+
+    T_inv = np.eye(4)
+    T_inv[:3, :3] = Rm.T
+    T_inv[:3, 3] = -Rm.T @ p
+    return T_inv
+
+def delta_pose_ee(p_cur, q_cur, p_des, q_des):
+    """
+    Returns delta pose in EE frame as:
+    [dx, dy, dz, qx, qy, qz, qw]
+    """
+    T_cur = pose_to_T(p_cur, q_cur)
+    T_des = pose_to_T(p_des, q_des)
+
+    T_delta = invert_T(T_cur) @ T_des
+
+    p_delta = T_delta[:3, 3]
+    q_delta = Rotation.from_matrix(T_delta[:3, :3]).as_quat()
+
+    return np.hstack((p_delta, q_delta))
+
+def quaternion_to_euler(quaternion: np.ndarray) -> np.ndarray:
+    rotation = Rotation.from_quat(quaternion)
+    angles = rotation.as_euler("xyz")
+    return angles
+
+def euler_to_quaternion(euler: np.ndarray, format: str = "xyz") -> np.ndarray:
+    rotation = Rotation.from_euler(format, euler)
+    quaternion = rotation.as_quat()
+    return quaternion
+
