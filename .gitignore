@@ -1,2 +1,6 @@
 source-env.sh
 id_dei*
+echo-scipt.sh
+echo-script.sh
+launch.slurm
+slurm-*.out
