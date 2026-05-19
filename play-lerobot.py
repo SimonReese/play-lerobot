@@ -6,11 +6,19 @@ from lerobot.policies.factory import make_pre_post_processors
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.configs.types import FeatureType, PolicyFeature, NormalizationMode
 
+# DATASETS PATHS
+LEROBOT_REPO_ID_V3 = "SimonReese/lerobot-20-ep-v3"
+LEROBOT_DATASET_ROOT_V3 = "./datasets/lerobot-20-ep-v3"
 
-dataset = LeRobotDataset("lerobot/libero_spatial_image")
+MODEL_ID = "lerobot/pi05_base"
+#LeRobotDataset("lerobot/libero_spatial_image")
+dataset = LeRobotDataset(
+    repo_id = LEROBOT_REPO_ID_V3,
+    root= LEROBOT_DATASET_ROOT_V3
+) 
 print(dataset.meta.features)
 
-model_id = "lerobot/pi05_base"
+
 policy = PI05Policy.from_pretrained(model_id).to("cuda").eval()
 print(policy.config.input_features)
 exit()

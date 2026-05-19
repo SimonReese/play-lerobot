@@ -4,3 +4,5 @@ echo-scipt.sh
 echo-script.sh
 launch.slurm
 slurm-*.out
+datasets/*
+.vscode/*
