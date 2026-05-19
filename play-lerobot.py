@@ -9,6 +9,8 @@ from lerobot.policies.factory import make_pre_post_processors
 from lerobot.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.configs.types import FeatureType, PolicyFeature, NormalizationMode
 
+from lerobot.utils.import_utils import register_third_party_plugins
+
 # DATASETS PATHS
 LEROBOT_REPO_ID_V3 = "SimonReese/lerobot-20-ep-v3"
 LEROBOT_DATASET_ROOT_V3 = "./datasets/lerobot-20-ep-v3"
@@ -52,10 +54,21 @@ def main_alt():
     )
     # Load model
     policy = PI05ExpPolicy(config=config)
-    pre, post = make_pi05_exp_pre_post_processors(
+    register_third_party_plugins()
+    pre, post = make_pre_post_processors( #make_pi05_exp_pre_post_processors(
         policy.config,
         dataset_stats=dataset.meta.stats #type: ignore
     )
+    print(policy.model)
+    exit()
+    idx = 0
+    for frame in dataset:
+        if idx == 10: break
+        processed = pre(frame)
+        pred = policy.select_action(processed)
+        processed = post(pred)
+        print(pred)
+        idx +=1
 
 def main():
     # Load dataset
