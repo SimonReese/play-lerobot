@@ -2,6 +2,7 @@ from lerobot.policies.pi05.modeling_pi05 import PI05Policy
 from lerobot.policies.pi05.configuration_pi05 import PI05Config
 from lerobot.policies.pi05_exp.modeling_pi05_exp import PI05ExpPolicy
 from lerobot.policies.pi05_exp.modeling_pi05_exp import PI05ExpConfig
+from lerobot.policies.pi05_exp.processor_pi05_exp import make_pi05_exp_pre_post_processors
 
 from lerobot.policies.factory import make_pre_post_processors
 
@@ -51,7 +52,7 @@ def main_alt():
     )
     # Load model
     policy = PI05ExpPolicy(config=config)
-    pre, post = make_pre_post_processors(
+    pre, post = make_pi05_exp_pre_post_processors(
         policy.config,
         dataset_stats=dataset.meta.stats #type: ignore
     )
