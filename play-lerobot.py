@@ -1,5 +1,7 @@
 from lerobot.policies.pi05.modeling_pi05 import PI05Policy
 from lerobot.policies.pi05.configuration_pi05 import PI05Config
+from lerobot.policies.pi05_exp.modeling_pi05_exp import PI05ExpPolicy
+from lerobot.policies.pi05_exp.modeling_pi05_exp import PI05ExpConfig
 
 from lerobot.policies.factory import make_pre_post_processors
 
@@ -26,6 +28,33 @@ def explore_dataset(dataset: LeRobotDataset, policy, pre, post):
         processed = post(prediction)
         print(processed)
         exit()
+
+def main_alt():
+     # Load dataset
+    dataset = LeRobotDataset(
+        repo_id = LEROBOT_REPO_ID_V3,
+        root= LEROBOT_DATASET_ROOT_V3
+    ) 
+    print(dataset.meta.features)
+    # Config
+    config = PI05ExpConfig(
+        input_features={
+            "observation.images.front": PolicyFeature(type=FeatureType.VISUAL, shape=(3, 224, 244)),
+            "observation.images.wrist": PolicyFeature(type=FeatureType.VISUAL, shape=(3, 224, 224)),
+            "state": PolicyFeature(type=FeatureType.STATE, shape=(8, ))
+        },
+        output_features={
+            "action": PolicyFeature(type=FeatureType.ACTION, shape=(7,))
+        },
+        device="cuda",
+        use_relative_actions=True
+    )
+    # Load model
+    policy = PI05ExpPolicy(config=config)
+    pre, post = make_pre_post_processors(
+        policy.config,
+        dataset_stats=dataset.meta.stats #type: ignore
+    )
 
 def main():
     # Load dataset
@@ -66,7 +95,7 @@ def main():
     
 
 if __name__ == "__main__":
-    main()
+    main_alt()
 
 def remap_features(policy):
     print("Changing features")
