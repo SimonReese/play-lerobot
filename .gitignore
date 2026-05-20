@@ -7,3 +7,4 @@ slurm-*.out
 datasets/*
 .vscode/*
 .venv/*
+outputs/*
