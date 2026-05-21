@@ -15,7 +15,7 @@ lerobot-train \
     --policy.device cuda \
     --policy.push_to_hub false \
     --policy.gradient_checkpointing true \
-    --policy.dtype bfloat16
+    --policy.dtype bfloat16 \
     --wandb.enable true \
     --wandb.entity simon-reese-personal \
     --wandb.project pi05_exp \
