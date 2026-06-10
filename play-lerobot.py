@@ -1,3 +1,5 @@
+from pprint import pformat
+
 from lerobot.policies.pi05.modeling_pi05 import PI05Policy
 from lerobot.policies.pi05.configuration_pi05 import PI05Config
 from lerobot.policies.pi05_exp.modeling_pi05_exp import PI05ExpPolicy
@@ -39,6 +41,7 @@ def main_alt():
         root= LEROBOT_DATASET_ROOT_V3
     ) 
     print(dataset.meta.features)
+    print("Dataset loaded")
     # Config
     config = PI05ExpConfig(
         input_features={
@@ -53,21 +56,23 @@ def main_alt():
         use_relative_actions=True
     )
     # Load model
-    policy = PI05ExpPolicy(config=config)
+    #policy = PI05ExpPolicy(config=config)
     register_third_party_plugins()
     pre, post = make_pre_post_processors( #make_pi05_exp_pre_post_processors(
-        policy.config,
+        config,
         dataset_stats=dataset.meta.stats #type: ignore
     )
-    print(policy.model)
-    exit()
+    print(f"Model loaded. Looping")
+    
     idx = 0
     for frame in dataset:
         if idx == 10: break
+        
+        print(f"Frame:\n{pformat(frame)}")
         processed = pre(frame)
-        pred = policy.select_action(processed)
-        processed = post(pred)
-        print(pred)
+        #pred = policy.select_action(processed)
+        #processed = post(pred)
+        #print(pred)
         idx +=1
 
 def main():
