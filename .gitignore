@@ -8,3 +8,5 @@ datasets/*
 .vscode/*
 .venv/*
 outputs/*
+logs/*
+__pycache__/*
